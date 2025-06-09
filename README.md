@@ -1,3 +1,5 @@
+![image](https://github.com/user-attachments/assets/70c2d14a-0d30-4331-91d5-cbf965eecb9f)
+
 # Strawberry Ripeness Analyzer
 
 Aplikasi web untuk menganalisis tingkat kematangan stroberi menggunakan computer vision. Aplikasi ini menggunakan Flask sebagai backend dan menyediakan antarmuka web yang intuitif untuk mengunggah dan menganalisis gambar stroberi.
