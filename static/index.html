@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisis Tingkat Kematangan Stroberi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="strawberry" patternUnits="userSpaceOnUse" width="20" height="20"><circle cx="10" cy="10" r="2" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23strawberry)"/></svg>');
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            border: 2px dashed #dee2e6;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #ff6b6b;
+            background: #fff5f5;
+        }
+
+        .upload-area {
+            text-align: center;
+            padding: 40px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            transform: translateY(-5px);
+        }
+
+        .upload-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border-left: 5px solid #ff6b6b;
+        }
+
+        .ripeness-level {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff6b6b;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .analyze-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff6b6b;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .ripeness-colors {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .color-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .mentah { background-color: #28a745; }
+        .setengah-matang { background-color: #ffc107; }
+        .matang { background-color: #fd7e14; }
+        .sangat-matang { background-color: #dc3545; }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍓 Analisis Tingkat Kematangan Stroberi</h1>
+            <p>Upload gambar stroberi untuk mengetahui tingkat kematangannya</p>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📸</div>
+                    <div class="upload-text">Klik untuk upload gambar</div>
+                    <div class="upload-hint">Format: JPG, PNG, maksimal 5MB</div>
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept="image/*">
+                <div id="imagePreview"></div>
+                <button id="analyzeBtn" class="analyze-btn" disabled>Analisis Kematangan</button>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Menganalisis gambar stroberi...</p>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h3 style="margin-bottom: 20px; color: #2c3e50;">Hasil Analisis</h3>
+                
+                <div class="ripeness-colors">
+                    <div><span class="color-indicator mentah"></span>Mentah</div>
+                    <div><span class="color-indicator setengah-matang"></span>Setengah Matang</div>
+                    <div><span class="color-indicator matang"></span>Matang</div>
+                    <div><span class="color-indicator sangat-matang"></span>Sangat Matang</div>
+                </div>
+
+                <div id="results" style="text-align: center; color: #6c757d; padding: 50px;">
+                    Upload gambar stroberi untuk melihat hasil analisis
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        let uploadedImage = null;
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showError('Ukuran file terlalu besar. Maksimal 5MB.');
+                return;
+            }
+
+            // Check file type
+            if (!file.type.startsWith('image/')) {
+                showError('File harus berupa gambar (JPG, PNG)');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedImage = e.target.result;
+                imagePreview.innerHTML = `<img src="${uploadedImage}" class="image-preview">`;
+                analyzeBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        analyzeBtn.addEventListener('click', analyzeStrawberry);
+
+        // Update the analyzeStrawberry function
+        function analyzeStrawberry() {
+            if (!uploadedImage) return;
+            
+            loading.style.display = 'block';
+            analyzeBtn.disabled = true;
+            
+            // Send image to backend
+            fetch('/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    image: uploadedImage
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+                
+                if (data.success) {
+                    displayResults(data);
+                } else {
+                    showError(data.error || 'Terjadi kesalahan dalam analisis');
+                }
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+                showError('Koneksi ke server gagal: ' + error.message);
+            });
+        }
+
+        function displayResults(data) {
+            const result = {
+                ripeness: data.ripeness,
+                confidence: data.confidence,
+                hue: data.color_stats.hue,
+                saturation: data.color_stats.saturation,
+                value: data.color_stats.value,
+                greenRatio: data.color_stats.green_ratio,
+                redRatio: data.color_stats.red_ratio,
+                color: getRipenessColor(data.ripeness)
+            };
+            
+            results.innerHTML = `
+                <div class="result-card">
+                    <div class="ripeness-level" style="color: ${result.color}">
+                        ${result.ripeness}
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <span style="background: ${result.color}; color: white; padding: 5px 10px; border-radius: 15px; font-size: 0.9rem;">
+                            Confidence: ${result.confidence.toFixed(1)}%
+                        </span>
+                    </div>
+                    <p style="color: #6c757d; margin-bottom: 20px;">
+                        ${getRipenessDescription(result.ripeness)}
+                    </p>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">${result.hue.toFixed(1)}</div>
+                            <div class="stat-label">Hue</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${result.saturation.toFixed(1)}</div>
+                            <div class="stat-label">Saturation</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${result.value.toFixed(1)}</div>
+                            <div class="stat-label">Value</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${(result.greenRatio * 100).toFixed(0)}%</div>
+                            <div class="stat-label">Rasio Hijau</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${(result.redRatio * 100).toFixed(0)}%</div>
+                            <div class="stat-label">Rasio Merah</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <strong>Rekomendasi:</strong> ${getRecommendation(result.ripeness)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function getRipenessColor(ripeness) {
+            const colors = {
+                "Mentah": "#28a745",
+                "Setengah Matang": "#ffc107",
+                "Matang": "#fd7e14",
+                "Sangat Matang": "#dc3545"
+            };
+            return colors[ripeness] || "#6c757d";
+        }
+
+        function showError(message) {
+            results.innerHTML = `
+                <div class="result-card" style="border-left-color: #dc3545;">
+                    <div style="color: #dc3545; font-size: 1.2rem; margin-bottom: 10px;">
+                        ❌ Error
+                    </div>
+                    <p style="color: #6c757d;">${message}</p>
+                </div>
+            `;
+        }
+
+        function getRipenessDescription(ripeness) {
+            const descriptions = {
+                "Mentah": "Stroberi masih dalam tahap awal pertumbuhan dengan dominasi warna hijau.",
+                "Setengah Matang": "Stroberi mulai menunjukkan tanda-tanda kematangan dengan campuran warna hijau dan merah.",
+                "Matang": "Stroberi sudah matang dengan warna merah yang dominan dan siap untuk dikonsumsi.",
+                "Sangat Matang": "Stroberi sangat matang dengan warna merah yang pekat, sebaiknya segera dikonsumsi."
+            };
+            return descriptions[ripeness] || "Tidak dapat menentukan tingkat kematangan.";
+        }
+
+        function getRecommendation(ripeness) {
+            const recommendations = {
+                "Mentah": "Stroberi belum siap untuk dikonsumsi. Tunggu beberapa hari hingga matang.",
+                "Setengah Matang": "Stroberi bisa dipanen dalam 1-2 hari ke depan.",
+                "Matang": "Stroberi sudah siap untuk dikonsumsi. Segera panen dan konsumsi dalam 1-2 hari.",
+                "Sangat Matang": "Stroberi harus segera dipanen dan dikonsumsi untuk menghindari pembusukan."
+            };
+            return recommendations[ripeness] || "Tidak ada rekomendasi yang tersedia.";
+        }
+    </script>
+</body>
+</html>
