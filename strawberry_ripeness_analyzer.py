@@ -7,9 +7,8 @@ import io
 
 class WebStrawberryAnalyzer:
     def __init__(self):
-        # Parameter untuk segmentasi warna stroberi
-        self.lower_green = np.array([35, 50, 50])
-        self.upper_green = np.array([85, 255, 255])
+        self.lower_green = np.array([30, 10, 80])   # Hue 35, Saturasi lebih rendah, Value lebih tinggi
+        self.upper_green = np.array([80, 150, 255]) # Range yang lebih sempit untuk hijau muda
         self.lower_red1 = np.array([0, 100, 100])
         self.upper_red1 = np.array([10, 255, 255])
         self.lower_red2 = np.array([160, 100, 100])
@@ -41,7 +40,7 @@ class WebStrawberryAnalyzer:
         """Segmentasi buah stroberi dari background"""
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         
-        # Deteksi warna hijau untuk stroberi mentah
+        # Deteksi warna hijau muda untuk stroberi mentah
         green_mask = cv2.inRange(hsv, self.lower_green, self.upper_green)
         
         # Deteksi warna merah untuk stroberi matang
@@ -104,7 +103,7 @@ class WebStrawberryAnalyzer:
         s_avg = np.mean(dominant_colors[:, 1])
         v_avg = np.mean(dominant_colors[:, 2])
         
-        # Hitung rasio piksel hijau vs merah
+        # Hitung rasio piksel hijau muda vs merah
         hsv = cv2.cvtColor(segmented, cv2.COLOR_BGR2HSV)
         green_mask = cv2.inRange(hsv, self.lower_green, self.upper_green)
         red_mask1 = cv2.inRange(hsv, self.lower_red1, self.upper_red1)
@@ -116,26 +115,36 @@ class WebStrawberryAnalyzer:
         total_pixels = green_pixels + red_pixels
         
         color_ratio = {
-            "green_ratio": green_pixels / total_pixels if total_pixels > 0 else 0,
+            "light_green_ratio": green_pixels / total_pixels if total_pixels > 0 else 0,
             "red_ratio": red_pixels / total_pixels if total_pixels > 0 else 0
         }
         
+        # Pastikan tidak ada NaN values
+        color_ratio["light_green_ratio"] = max(0, min(1, color_ratio["light_green_ratio"]))
+        color_ratio["red_ratio"] = max(0, min(1, color_ratio["red_ratio"]))
+        
+        # Normalisasi jika total melebihi 100%
+        total_ratio = color_ratio["light_green_ratio"] + color_ratio["red_ratio"]
+        if total_ratio > 1:
+            color_ratio["light_green_ratio"] /= total_ratio
+            color_ratio["red_ratio"] /= total_ratio
+        
         color_stats = {
-            "hue": float(h_avg),
-            "saturation": float(s_avg),
-            "value": float(v_avg),
-            "green_ratio": float(color_ratio["green_ratio"]),
-            "red_ratio": float(color_ratio["red_ratio"])
+            "hue": float(h_avg) if not np.isnan(h_avg) else 0.0,
+            "saturation": float(s_avg) if not np.isnan(s_avg) else 0.0,
+            "value": float(v_avg) if not np.isnan(v_avg) else 0.0,
+            "light_green_ratio": float(color_ratio["light_green_ratio"]) if not np.isnan(color_ratio["light_green_ratio"]) else 0.0,
+            "red_ratio": float(color_ratio["red_ratio"]) if not np.isnan(color_ratio["red_ratio"]) else 0.0
         }
         
         # Logika kematangan untuk stroberi
         ripeness = "Tidak dapat ditentukan"
         confidence = 0
         
-        if color_ratio["green_ratio"] > 0.7:
-            ripeness = "Mentah"
-            confidence = min(95, color_ratio["green_ratio"] * 100)
-        elif color_ratio["green_ratio"] > 0.3:
+        if color_ratio["light_green_ratio"] > 0.7:
+            ripeness = "Mentah (Hijau Muda)"
+            confidence = min(95, color_ratio["light_green_ratio"] * 100)
+        elif color_ratio["light_green_ratio"] > 0.3:
             ripeness = "Setengah Matang"
             confidence = 80
         elif s_avg > 200 and v_avg > 200 and color_ratio["red_ratio"] > 0.9:

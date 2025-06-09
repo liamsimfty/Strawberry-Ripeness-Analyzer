@@ -422,25 +422,32 @@
         });
 
         function handleFile(file) {
-            // Check file size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                showError('Ukuran file terlalu besar. Maksimal 5MB.');
-                return;
-            }
+            try {
+                // Check file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    showError('Ukuran file terlalu besar. Maksimal 5MB.');
+                    return;
+                }
 
-            // Check file type
-            if (!file.type.startsWith('image/')) {
-                showError('File harus berupa gambar (JPG, PNG)');
-                return;
-            }
+                // Check file type
+                if (!file.type.startsWith('image/')) {
+                    showError('File harus berupa gambar (JPG, PNG)');
+                    return;
+                }
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                uploadedImage = e.target.result;
-                imagePreview.innerHTML = `<img src="${uploadedImage}" class="image-preview">`;
-                analyzeBtn.disabled = false;
-            };
-            reader.readAsDataURL(file);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedImage = e.target.result;
+                    imagePreview.innerHTML = `<img src="${uploadedImage}" class="image-preview">`;
+                    analyzeBtn.disabled = false;
+                };
+                reader.onerror = function() {
+                    showError('Gagal membaca file. Silakan coba lagi.');
+                };
+                reader.readAsDataURL(file);
+            } catch (error) {
+                showError('Terjadi kesalahan saat memproses file: ' + error.message);
+            }
         }
 
         fileInput.addEventListener('change', function(e) {
@@ -453,6 +460,10 @@
         // Camera functionality
         async function openCamera() {
             try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('Browser Anda tidak mendukung akses kamera');
+                }
+
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { 
                         facingMode: 'environment',
@@ -463,7 +474,20 @@
                 cameraPreview.srcObject = stream;
                 cameraModal.style.display = 'flex';
             } catch (err) {
-                showError('Tidak dapat mengakses kamera: ' + err.message);
+                let errorMessage = 'Tidak dapat mengakses kamera: ';
+                
+                if (err.name === 'NotAllowedError') {
+                    errorMessage = 'Akses kamera ditolak. Silakan izinkan akses kamera di pengaturan browser Anda.';
+                } else if (err.name === 'NotFoundError') {
+                    errorMessage = 'Tidak dapat menemukan kamera. Pastikan perangkat Anda memiliki kamera.';
+                } else if (err.name === 'NotReadableError') {
+                    errorMessage = 'Kamera sedang digunakan oleh aplikasi lain. Silakan tutup aplikasi lain yang menggunakan kamera.';
+                } else {
+                    errorMessage += err.message;
+                }
+                
+                showError(errorMessage);
+                console.error('Camera error:', err);
             }
         }
 
@@ -476,17 +500,31 @@
         }
 
         function captureImage() {
-            const canvas = document.createElement('canvas');
-            canvas.width = cameraPreview.videoWidth;
-            canvas.height = cameraPreview.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(cameraPreview, 0, 0);
-            
-            uploadedImage = canvas.toDataURL('image/jpeg');
-            imagePreview.innerHTML = `<img src="${uploadedImage}" class="image-preview">`;
-            analyzeBtn.disabled = false;
-            
-            closeCamera();
+            try {
+                if (!cameraPreview.srcObject) {
+                    throw new Error('Kamera tidak aktif');
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = cameraPreview.videoWidth;
+                canvas.height = cameraPreview.videoHeight;
+                const ctx = canvas.getContext('2d');
+                
+                if (!ctx) {
+                    throw new Error('Tidak dapat mengakses canvas');
+                }
+                
+                ctx.drawImage(cameraPreview, 0, 0);
+                
+                uploadedImage = canvas.toDataURL('image/jpeg');
+                imagePreview.innerHTML = `<img src="${uploadedImage}" class="image-preview">`;
+                analyzeBtn.disabled = false;
+                
+                closeCamera();
+            } catch (error) {
+                showError('Gagal mengambil foto: ' + error.message);
+                closeCamera();
+            }
         }
 
         // Close camera when clicking outside
@@ -503,6 +541,7 @@
             
             loading.style.display = 'block';
             analyzeBtn.disabled = true;
+            results.innerHTML = ''; // Clear previous results
             
             // Send image to backend
             fetch('/analyze', {
@@ -514,21 +553,49 @@
                     image: uploadedImage
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 loading.style.display = 'none';
                 analyzeBtn.disabled = false;
                 
-                if (data.success) {
-                    displayResults(data);
-                } else {
-                    showError(data.error || 'Terjadi kesalahan dalam analisis');
+                if (data.error) {
+                    showError(data.error);
+                    return;
                 }
+                
+                if (!data.success) {
+                    showError('Analisis gagal: ' + (data.message || 'Terjadi kesalahan yang tidak diketahui'));
+                    return;
+                }
+                
+                if (!data.color_stats || !data.color_stats.hue) {
+                    showError('Data analisis tidak lengkap. Silakan coba lagi dengan gambar yang berbeda.');
+                    return;
+                }
+                
+                displayResults(data);
             })
             .catch(error => {
                 loading.style.display = 'none';
                 analyzeBtn.disabled = false;
-                showError('Koneksi ke server gagal: ' + error.message);
+                
+                let errorMessage = 'Terjadi kesalahan dalam analisis: ';
+                
+                if (error.message.includes('Failed to fetch')) {
+                    errorMessage = 'Tidak dapat terhubung ke server. Pastikan server berjalan dan coba lagi.';
+                } else if (error.message.includes('HTTP error')) {
+                    errorMessage = 'Server mengembalikan error. Silakan coba lagi.';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                showError(errorMessage);
+                console.error('Analysis error:', error);
             });
         }
 
@@ -605,6 +672,15 @@
                         ❌ Error
                     </div>
                     <p style="color: #6c757d;">${message}</p>
+                    <div style="margin-top: 15px; font-size: 0.9rem; color: #666;">
+                        Tips:
+                        <ul style="margin-top: 5px; padding-left: 20px;">
+                            <li>Pastikan gambar stroberi jelas dan terang</li>
+                            <li>Stroberi harus mendominasi frame gambar</li>
+                            <li>Hindari bayangan yang berlebihan</li>
+                            <li>Coba dengan gambar yang berbeda</li>
+                        </ul>
+                    </div>
                 </div>
             `;
         }
