@@ -7,8 +7,8 @@ import io
 
 class WebStrawberryAnalyzer:
     def __init__(self):
-        self.lower_green = np.array([30, 10, 80])   # Hue 35, Saturasi lebih rendah, Value lebih tinggi
-        self.upper_green = np.array([80, 150, 255]) # Range yang lebih sempit untuk hijau muda
+        self.lower_green = np.array([25, 50, 120]) 
+        self.upper_green = np.array([40, 180, 255]) 
         self.lower_red1 = np.array([0, 100, 100])
         self.upper_red1 = np.array([10, 255, 255])
         self.lower_red2 = np.array([160, 100, 100])
